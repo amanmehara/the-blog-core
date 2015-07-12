@@ -1,0 +1,17 @@
+﻿@model theblogcore.Models.ApplicationUser
+
+@{
+    ViewBag.Title = "Registration Successful";
+}
+
+<h2>@ViewBag.Title.</h2>
+<div>
+    <h4>Welcome <strong><i>@Model.UserName</i></strong></h4>
+    <p>
+        Please confirm your account by clicking on the activation link sent to your email.
+    </p>
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}
