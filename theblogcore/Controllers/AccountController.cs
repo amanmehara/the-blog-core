@@ -10,6 +10,7 @@ using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using theblogcore.Models;
 using System.Net;
+using System.Security.Principal;
 
 namespace theblogcore.Controllers
 {
@@ -74,7 +75,23 @@ namespace theblogcore.Controllers
             if (!ModelState.IsValid)
             {
                 return View(model);
-            }            
+            }
+
+            // Require the user to have a confirmed email
+            var user = await UserManager.FindByNameAsync(model.Email);
+            if (user != null)
+            {
+                if (!await UserManager.IsEmailConfirmedAsync(user.Id))
+                {
+                    // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=320771
+                    // Send an email with this link
+                    string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+                    var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Url.Scheme);
+                    await UserManager.SendEmailAsync(user.Id, "Confirm your account", "Please confirm your account by clicking <a href=\"" + callbackUrl + "\">here</a>");
+                    
+                    return RedirectToAction("RegisterConfirmation", new { id = user.Id });
+                }
+            }
 
             // This doesn't count login failures towards account lockout
             // To enable password failures to trigger account lockout, change to shouldLockout: true
@@ -82,25 +99,6 @@ namespace theblogcore.Controllers
             switch (result)
             {
                 case SignInStatus.Success:
-
-                    // Require the user to have a confirmed email
-                    var user = await UserManager.FindByNameAsync(model.Email);
-                    if (user != null)
-                    {
-                        if (!await UserManager.IsEmailConfirmedAsync(user.Id))
-                        {
-                            // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=320771
-                            // Send an email with this link
-                            string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
-                            var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Url.Scheme);
-                            await UserManager.SendEmailAsync(user.Id, "Confirm your account", "Please confirm your account by clicking <a href=\"" + callbackUrl + "\">here</a>");
-
-                            AuthenticationManager.SignOut();
-
-                            return RedirectToAction("RegisterConfirmation", new { id = user.Id });
-                        }
-                    }
-
                     return RedirectToLocal(returnUrl);
                 case SignInStatus.LockedOut:
                     return View("Lockout");
